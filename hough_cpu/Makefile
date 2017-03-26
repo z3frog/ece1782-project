@@ -235,9 +235,13 @@ endif
 ################################################################################
 
 # Target rules
-all: build
+all: buildcpust buildcpumt buildgpu
 
-build: houghCPU
+buildcpust: houghCPUst
+
+buildcpumt: houghCPUmt
+
+buildgpu: houghGPU
 
 check.deps:
 ifeq ($(SAMPLE_ENABLED),0)
@@ -246,16 +250,31 @@ else
 	@echo "Sample is ready - all dependencies have been met"
 endif
 
-houghCPU.o:houghCPU.cu
+houghCPUst.o:houghCPUst.cu
 	$(EXEC) $(NVCC) $(INCLUDES) $(ALL_CCFLAGS) $(GENCODE_FLAGS) -o $@ -c $<
 
-houghCPU: houghCPU.o
+houghCPUst: houghCPUst.o
 	$(EXEC) $(NVCC) $(ALL_LDFLAGS) $(GENCODE_FLAGS) -o $@ $+ $(LIBRARIES)
 
-run: build
-	$(EXEC) ./houghCPU
+houghCPUmt.o:houghCPUmt.cu
+	$(EXEC) $(NVCC) $(INCLUDES) $(ALL_CCFLAGS) $(GENCODE_FLAGS) -o $@ -c $<
+
+houghCPUmt: houghCPUmt.o
+	$(EXEC) $(NVCC) $(ALL_LDFLAGS) $(GENCODE_FLAGS) -o $@ $+ $(LIBRARIES)
+
+houghGPU.o:houghGPU.cu
+	$(EXEC) $(NVCC) $(INCLUDES) $(ALL_CCFLAGS) $(GENCODE_FLAGS) -o $@ -c $<
+
+houghGPU: houghGPU.o
+	$(EXEC) $(NVCC) $(ALL_LDFLAGS) $(GENCODE_FLAGS) -o $@ $+ $(LIBRARIES)
+
+
+run: buildcpust buildcpumt buildgpu
+	$(EXEC) ./houghCPUst Pentagon.png houghCPUst.png
+	$(EXEC) ./houghCPUmt Pentagon.png houghCPUmt.png
+	$(EXEC) ./houghGPU Pentagon.png houghGPU.png
 
 clean:
-	rm -f houghCPU houghCPU.o
+	rm -f houghCPUst houghCPUst.o houghCPUmt houghCPUmt.o houghGPU houghGPU.o houghCPUst.png houghCPUmt.png houghGPU.png 
 
 clobber: clean

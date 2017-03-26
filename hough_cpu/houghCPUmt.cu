@@ -1,4 +1,5 @@
-// from https://rosettacode.org/wiki/Example:Hough_transform/C
+// Imported from https://rosettacode.org/wiki/Example:Hough_transform/C
+// It will be used as a baseline to observe transformation
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
