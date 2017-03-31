@@ -205,7 +205,7 @@ ALL_LDFLAGS += $(addprefix -Xlinker ,$(EXTRA_LDFLAGS))
 
 # Common includes and paths for cairo, app timer
 INCLUDES  := -I../cairo/include/cairo -I../time/
-LIBRARIES := -L../cairo/lib -lcairo
+LIBRARIES := -L../cairo/lib -lcairo -lpthread
 
 # Adding path to app timer dir
 VPATH = :../time

@@ -5,7 +5,8 @@
 #include <stdint.h>
 #include <string.h>
 #include <math.h>
- 
+#include <pthread.h>
+
 #include "cairo.h"
 #include "apptime.h"
  
@@ -28,9 +29,10 @@ uint8_t *houghtransform(uint8_t *d, int *w, int *h, int *s, int bpp)
     uint8_t *ht = (uint8_t *)malloc(th*tw*4);
     memset(ht, 0, 4*th*tw); // black bg
 
-
+     
     for(rho = 0; rho < th; rho++)
     {
+	uint64_t session_time;
         for(theta = 0; theta < tw/*720*/; theta++)
         {
             double C = cos(RAD(theta));
@@ -68,7 +70,7 @@ uint8_t *houghtransform(uint8_t *d, int *w, int *h, int *s, int bpp)
                 SG(theta, rho) = (int)(totalgreen/dp) &0xff;
                 SB(theta, rho) = (int)(totalblue/dp)  &0xff;
             }
-        }
+        }	
     }
  
     *h = th;   // sqrt(W*W+H*H)/2
@@ -84,7 +86,8 @@ int main(int argc, char **argv)
 
     uint8_t *houghdata = NULL, *inputdata = NULL;
     int w, h, s, bpp, format;
-    uint64_t transform_time = 0;
+    uint64_t measurement_time = 0;
+    
 
 #if (CAIRO_HAS_PNG_FUNCTIONS==1)
     printf("cairo supports PNG\n");
@@ -97,6 +100,11 @@ int main(int argc, char **argv)
     printf("input file: %s\n", argv[1]);
     printf("output file: %s\n", argv[2]);
 
+    apptime_print_res();
+
+    // Lets measure initialization time.
+    apptime_start_session();
+    printf("Initialization...\n");
     inputimg = cairo_image_surface_create_from_png(argv[1]);
 
     printf("After create from png: %s\n",
@@ -117,8 +125,11 @@ int main(int argc, char **argv)
     }
 
     inputdata = cairo_image_surface_get_data(inputimg);
-    
-    apptime_print_res();
+    apptime_stop_session(&measurement_time);
+    printf("Initialization Completed. Time: %lld ns\n", measurement_time);
+
+    // Now lets measure the Hough Time.
+    printf("Hough Transform started...\n");
     if (apptime_start_session() == false)
     {
        printf("Error starting app timer\n");
@@ -126,13 +137,13 @@ int main(int argc, char **argv)
     
     houghdata = houghtransform(inputdata, &w, &h, &s, bpp);
     
-    if (apptime_stop_session(&transform_time) == false)
+    if (apptime_stop_session(&measurement_time) == false)
     {
        printf("Error stopping app timer\n");
     }
     else
     {
-        printf("ST transform took %llu ns\n", transform_time);
+        printf("Hought transform completed. Time:  %llu ns\n", measurement_time);
     }
     
     printf("w=%d, h=%d\n", w, h);

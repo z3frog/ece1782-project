@@ -7,6 +7,7 @@
 #include <math.h>
  
 #include "cairo.h"
+#include "apptime.h"
  
 #ifndef M_PI
 #define M_PI 3.1415927
@@ -83,6 +84,8 @@ int main(int argc, char **argv)
 
     uint8_t *houghdata = NULL, *inputdata = NULL;
     int w, h, s, bpp, format;
+    uint64_t measurement_time = 0;
+    
 
 #if (CAIRO_HAS_PNG_FUNCTIONS==1)
     printf("cairo supports PNG\n");
@@ -95,6 +98,11 @@ int main(int argc, char **argv)
     printf("input file: %s\n", argv[1]);
     printf("output file: %s\n", argv[2]);
 
+    apptime_print_res();
+
+    // Lets measure initialization time.
+    apptime_start_session();
+    printf("Initialization...\n");
     inputimg = cairo_image_surface_create_from_png(argv[1]);
 
     printf("After create from png: %s\n",
@@ -115,8 +123,27 @@ int main(int argc, char **argv)
     }
 
     inputdata = cairo_image_surface_get_data(inputimg);
-    houghdata = houghtransform(inputdata, &w, &h, &s, bpp);
+    apptime_stop_session(&measurement_time);
+    printf("Initialization Completed. Time: %lld ns\n", measurement_time);
 
+    // Now lets measure the Hough Time.
+    printf("Hough Transform started...\n");
+    if (apptime_start_session() == false)
+    {
+       printf("Error starting app timer\n");
+    }
+    
+    houghdata = houghtransform(inputdata, &w, &h, &s, bpp);
+    
+    if (apptime_stop_session(&measurement_time) == false)
+    {
+       printf("Error stopping app timer\n");
+    }
+    else
+    {
+        printf("Hought transform completed. Time:  %llu ns\n", measurement_time);
+    }
+    
     printf("w=%d, h=%d\n", w, h);
     houghimg = cairo_image_surface_create_for_data(houghdata,
                         CAIRO_FORMAT_RGB24,

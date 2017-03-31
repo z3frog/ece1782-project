@@ -66,7 +66,7 @@ void apptime_print_res(void)
 {
     struct timespec ts;
     clock_getres(CLOCK_MONOTONIC, &ts);
-    printf("timer resolution is: %llu s and %llu ns\n", ts.tv_sec, ts.tv_nsec);
+    printf("Timer resolution is: %llu s and %llu ns\n", ts.tv_sec, ts.tv_nsec);
 }
 
 void apptime_set_time_units(enum APPTIME_UNIT units)
@@ -75,11 +75,6 @@ void apptime_set_time_units(enum APPTIME_UNIT units)
     return;
 
   unit_ = units;
-}
-
-uint64_t get_ns_from_timespec(const struct timespec *ts)
-{
-    return (ts->tv_sec * (uint64_t)1000000000) + ts->tv_nsec;
 }
 
 /*
@@ -91,5 +86,5 @@ static uint64_t apptime_get_time(void)
 {
     struct timespec ts;
     clock_gettime(CLOCK_MONOTONIC, &ts);
-    return get_ns_from_timespec(&ts);
+    return (ts.tv_sec * (uint64_t)1000000000) + ts.tv_nsec;
 }
