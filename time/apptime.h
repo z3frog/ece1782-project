@@ -7,15 +7,16 @@
 #ifndef _APPTIME_H_
 #define _APPTIME_H_
 
-#include <float.h>
 #include <stdbool.h>
+#include <stdint.h>
 
 enum APPTIME_UNIT
 {
-  APPTIME_UNIT_US,
-  APPTIME_UNIT_MS,
-  APPTIME_UNIT_S,
-  APPTIME_UNITS  
+    APPTIME_UNIT_NS,
+    APPTIME_UNIT_US,
+    APPTIME_UNIT_MS,
+    APPTIME_UNIT_S,
+    APPTIME_UNITS  
 };
 
 /**
@@ -27,13 +28,13 @@ enum APPTIME_UNIT
 bool apptime_start_session(void);
 
 /**
- *  param: uint32_t* session_time
+ *  param: uint64_t* session_time
  *         Denotes the time that was spent in the session.
  *  returns: true if timing session was stopped
  *           false if timing session was not stopped
  *                 usually if a timing session was not in progress.
  **/
-bool apptime_stop_session(double* session_time);
+bool apptime_stop_session(uint64_t* session_time);
 
 /**
  *  param: enum APPTIME_UNITS units
@@ -44,4 +45,9 @@ bool apptime_stop_session(double* session_time);
  **/
 void apptime_set_time_units(enum APPTIME_UNIT units);
 
+/**
+ *  param: none
+ *  returns: none
+ **/
+void apptime_print_res();
 #endif

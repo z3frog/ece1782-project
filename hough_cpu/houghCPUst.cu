@@ -7,6 +7,7 @@
 #include <math.h>
  
 #include "cairo.h"
+#include "apptime.h"
  
 #ifndef M_PI
 #define M_PI 3.1415927
@@ -83,6 +84,7 @@ int main(int argc, char **argv)
 
     uint8_t *houghdata = NULL, *inputdata = NULL;
     int w, h, s, bpp, format;
+    uint64_t transform_time = 0;
 
 #if (CAIRO_HAS_PNG_FUNCTIONS==1)
     printf("cairo supports PNG\n");
@@ -115,8 +117,24 @@ int main(int argc, char **argv)
     }
 
     inputdata = cairo_image_surface_get_data(inputimg);
+    
+    apptime_print_res();
+    if (apptime_start_session() == false)
+    {
+       printf("Error starting app timer\n");
+    }
+    
     houghdata = houghtransform(inputdata, &w, &h, &s, bpp);
-
+    
+    if (apptime_stop_session(&transform_time) == false)
+    {
+       printf("Error stopping app timer\n");
+    }
+    else
+    {
+        printf("ST transform took %llu ns\n", transform_time);
+    }
+    
     printf("w=%d, h=%d\n", w, h);
     houghimg = cairo_image_surface_create_for_data(houghdata,
                         CAIRO_FORMAT_RGB24,

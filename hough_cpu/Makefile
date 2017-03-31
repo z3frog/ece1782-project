@@ -203,9 +203,12 @@ ALL_LDFLAGS += $(ALL_CCFLAGS)
 ALL_LDFLAGS += $(addprefix -Xlinker ,$(LDFLAGS))
 ALL_LDFLAGS += $(addprefix -Xlinker ,$(EXTRA_LDFLAGS))
 
-# Common includes and paths for cairo
-INCLUDES  := -I../cairo/include/cairo
+# Common includes and paths for cairo, app timer
+INCLUDES  := -I../cairo/include/cairo -I../time/
 LIBRARIES := -L../cairo/lib -lcairo
+
+# Adding path to app timer dir
+VPATH = :../time
 
 ################################################################################
 
@@ -250,31 +253,33 @@ else
 	@echo "Sample is ready - all dependencies have been met"
 endif
 
+apptime.o:apptime.cu
+	$(EXEC) $(NVCC) $(INCLUDES) $(ALL_CCFLAGS) $(GENCODE_FLAGS) -o $@ -c $<
+
 houghCPUst.o:houghCPUst.cu
 	$(EXEC) $(NVCC) $(INCLUDES) $(ALL_CCFLAGS) $(GENCODE_FLAGS) -o $@ -c $<
 
-houghCPUst: houghCPUst.o
-	$(EXEC) $(NVCC) $(ALL_LDFLAGS) $(GENCODE_FLAGS) -o $@ $+ $(LIBRARIES)
+houghCPUst: apptime.o houghCPUst.o 
+	$(EXEC) $(NVCC) $(ALL_LDFLAGS) $(GENCODE_FLAGS) -o $@ $+ $(LIBRARIES)	
 
 houghCPUmt.o:houghCPUmt.cu
 	$(EXEC) $(NVCC) $(INCLUDES) $(ALL_CCFLAGS) $(GENCODE_FLAGS) -o $@ -c $<
 
-houghCPUmt: houghCPUmt.o
+houghCPUmt: apptime.o houghCPUmt.o 	
 	$(EXEC) $(NVCC) $(ALL_LDFLAGS) $(GENCODE_FLAGS) -o $@ $+ $(LIBRARIES)
 
 houghGPU.o:houghGPU.cu
 	$(EXEC) $(NVCC) $(INCLUDES) $(ALL_CCFLAGS) $(GENCODE_FLAGS) -o $@ -c $<
 
-houghGPU: houghGPU.o
-	$(EXEC) $(NVCC) $(ALL_LDFLAGS) $(GENCODE_FLAGS) -o $@ $+ $(LIBRARIES)
-
-
+houghGPU: apptime.o houghGPU.o
+	$(EXEC) $(NVCC) $(ALL_LDFLAGS) $(GENCODE_FLAGS) -o $@ $+ $(LIBRARIES)  
+    
 run: buildcpust buildcpumt buildgpu
 	$(EXEC) ./houghCPUst Pentagon.png houghCPUst.png
 	$(EXEC) ./houghCPUmt Pentagon.png houghCPUmt.png
 	$(EXEC) ./houghGPU Pentagon.png houghGPU.png
 
 clean:
-	rm -f houghCPUst houghCPUst.o houghCPUmt houghCPUmt.o houghGPU houghGPU.o houghCPUst.png houghCPUmt.png houghGPU.png 
+	rm -f houghCPUst houghCPUst.o houghCPUmt houghCPUmt.o houghGPU houghGPU.o apptime.o houghCPUst.png houghCPUmt.png houghGPU.png 
 
 clobber: clean
