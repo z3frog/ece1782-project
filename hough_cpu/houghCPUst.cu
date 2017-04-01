@@ -32,7 +32,6 @@ uint8_t *houghtransform(uint8_t *d, int *w, int *h, int *s, int bpp)
      
     for(rho = 0; rho < th; rho++)
     {
-	uint64_t session_time;
         for(theta = 0; theta < tw/*720*/; theta++)
         {
             double C = cos(RAD(theta));

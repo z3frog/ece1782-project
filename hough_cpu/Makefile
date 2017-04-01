@@ -275,9 +275,9 @@ houghGPU: apptime.o houghGPU.o
 	$(EXEC) $(NVCC) $(ALL_LDFLAGS) $(GENCODE_FLAGS) -o $@ $+ $(LIBRARIES)  
     
 run: buildcpust buildcpumt buildgpu
-	$(EXEC) ./houghCPUst Pentagon.png houghCPUst.png
-	$(EXEC) ./houghCPUmt Pentagon.png houghCPUmt.png
-	$(EXEC) ./houghGPU Pentagon.png houghGPU.png
+	$(EXEC) ./houghCPUst Car.png houghCPUst.png
+	$(EXEC) ./houghCPUmt Car.png houghCPUmt.png
+	$(EXEC) ./houghGPU Car.png houghGPU.png
 
 clean:
 	rm -f houghCPUst houghCPUst.o houghCPUmt houghCPUmt.o houghGPU houghGPU.o apptime.o houghCPUst.png houghCPUmt.png houghGPU.png 
