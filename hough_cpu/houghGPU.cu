@@ -5,7 +5,8 @@
 #include <stdint.h>
 #include <string.h>
 #include <math.h>
- 
+#include <pthread.h>
+
 #include "cairo.h"
 #include "apptime.h"
  
@@ -28,7 +29,7 @@ uint8_t *houghtransform(uint8_t *d, int *w, int *h, int *s, int bpp)
     uint8_t *ht = (uint8_t *)malloc(th*tw*4);
     memset(ht, 0, 4*th*tw); // black bg
 
-
+     
     for(rho = 0; rho < th; rho++)
     {
         for(theta = 0; theta < tw/*720*/; theta++)
@@ -68,7 +69,7 @@ uint8_t *houghtransform(uint8_t *d, int *w, int *h, int *s, int bpp)
                 SG(theta, rho) = (int)(totalgreen/dp) &0xff;
                 SB(theta, rho) = (int)(totalblue/dp)  &0xff;
             }
-        }
+        }	
     }
  
     *h = th;   // sqrt(W*W+H*H)/2
@@ -101,7 +102,7 @@ int main(int argc, char **argv)
     apptime_print_res();
 
     // Lets measure initialization time.
-    apptime_start_session();
+    apptime_start_session(&measurement_time);
     printf("Initialization...\n");
     inputimg = cairo_image_surface_create_from_png(argv[1]);
 
@@ -123,26 +124,17 @@ int main(int argc, char **argv)
     }
 
     inputdata = cairo_image_surface_get_data(inputimg);
-    apptime_stop_session(&measurement_time);
+    measurement_time = apptime_stop_session(&measurement_time);
     printf("Initialization Completed. Time: %lld ns\n", measurement_time);
 
     // Now lets measure the Hough Time.
     printf("Hough Transform started...\n");
-    if (apptime_start_session() == false)
-    {
-       printf("Error starting app timer\n");
-    }
+    apptime_start_session(&measurement_time);
     
     houghdata = houghtransform(inputdata, &w, &h, &s, bpp);
     
-    if (apptime_stop_session(&measurement_time) == false)
-    {
-       printf("Error stopping app timer\n");
-    }
-    else
-    {
-        printf("Hought transform completed. Time:  %llu ns\n", measurement_time);
-    }
+    measurement_time = apptime_stop_session(&measurement_time);
+    printf("Hought transform completed. Time:  %llu ns\n", measurement_time);
     
     printf("w=%d, h=%d\n", w, h);
     houghimg = cairo_image_surface_create_for_data(houghdata,

@@ -133,6 +133,7 @@ void * computationblock(void* data)
    int rho, theta, y, x;
    struct computationblock_limits * cl  = (struct computationblock_limits*)(data);
 
+   apptime_start_session(&thread_time);
    for(rho = cl->rho_start; rho < cl->rho_end; rho++)
    {
      for(theta = 0; theta < tw/*720*/; theta++)
@@ -174,13 +175,15 @@ void * computationblock(void* data)
 	 }
        }
     }
-       
+    
+    thread_time = apptime_stop_session(&thread_time);
+    printf("Thread %d exited. Time: %lld nm\n", cl->tid, thread_time);
+
     pthread_exit((void*) &cl->tid);
 }
  
 int main(int argc, char **argv)
 {
-    
     cairo_surface_t *inputimg = NULL;
     cairo_surface_t *houghimg = NULL;
 
@@ -199,11 +202,11 @@ int main(int argc, char **argv)
 
     printf("input file: %s\n", argv[1]);
     printf("output file: %s\n", argv[2]);
-    
+
     apptime_print_res();
 
     // Lets measure initialization time.
-    apptime_start_session();
+    apptime_start_session(&measurement_time);
     printf("Initialization...\n");
     inputimg = cairo_image_surface_create_from_png(argv[1]);
 
@@ -225,26 +228,17 @@ int main(int argc, char **argv)
     }
 
     inputdata = cairo_image_surface_get_data(inputimg);
-    apptime_stop_session(&measurement_time);
+    measurement_time = apptime_stop_session(&measurement_time);
     printf("Initialization Completed. Time: %lld ns\n", measurement_time);
 
     // Now lets measure the Hough Time.
     printf("Hough Transform started...\n");
-    if (apptime_start_session() == false)
-    {
-       printf("Error starting app timer\n");
-    }
+    apptime_start_session(&measurement_time);
     
     houghdata = houghtransform(inputdata, &w, &h, &s, bpp);
     
-    if (apptime_stop_session(&measurement_time) == false)
-    {
-       printf("Error stopping app timer\n");
-    }
-    else
-    {
-        printf("Hought transform completed. Time:  %llu ns\n", measurement_time);
-    }
+    measurement_time = apptime_stop_session(&measurement_time);
+    printf("Hought transform completed. Time:  %llu ns\n", measurement_time);
     
     printf("w=%d, h=%d\n", w, h);
     houghimg = cairo_image_surface_create_for_data(houghdata,

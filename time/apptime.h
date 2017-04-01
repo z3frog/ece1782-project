@@ -20,30 +20,19 @@ enum APPTIME_UNIT
 };
 
 /**
- *  param: none
- *  returns: true if new timing session was started.
- *           false if new timing session could not be stated.
- *                 usually if another timing session was not stopped.
+ *  param: uint64_t* session_time
+ *         Denotes the start time.
+ *  returns: none
  **/
-bool apptime_start_session(void);
+void apptime_start_session(uint64_t* start_time);
 
 /**
  *  param: uint64_t* session_time
  *         Denotes the time that was spent in the session.
- *  returns: true if timing session was stopped
- *           false if timing session was not stopped
- *                 usually if a timing session was not in progress.
+ *  returns: uint64_t
+ *           the time spent in the session.               
  **/
-bool apptime_stop_session(uint64_t* session_time);
-
-/**
- *  param: enum APPTIME_UNITS units
- *         Units for timestamps
- *  returns: true if units were updated.
- *           false if units were not updated.
- *        
- **/
-void apptime_set_time_units(enum APPTIME_UNIT units);
+uint64_t apptime_stop_session(uint64_t* start_time);
 
 /**
  *  param: none
