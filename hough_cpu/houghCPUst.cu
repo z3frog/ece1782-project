@@ -9,11 +9,13 @@
 
 #include "cairo.h"
 #include "apptime.h"
- 
+
 #ifndef M_PI
 #define M_PI 3.1415927
 #endif
- 
+
+// These are macros to access the R, G and B values
+// of the input  (d) data/ output data (ht) image buffers
 #define GR(X,Y) (d[(*s)*(Y)+bpp*(X)+((2)%bpp)])
 #define GG(X,Y) (d[(*s)*(Y)+bpp*(X)+((1)%bpp)])
 #define GB(X,Y) (d[(*s)*(Y)+bpp*(X)+((0)%bpp)])
@@ -21,6 +23,10 @@
 #define SG(X,Y) (ht[4*tw*((Y)%th)+4*((X)%tw)+1])
 #define SB(X,Y) (ht[4*tw*((Y)%th)+4*((X)%tw)+0])
 #define RAD(A)  (M_PI*((double)(A))/180.0)
+
+// d  is pointer to input data
+// w, h, s is input data's width, height, and stride
+// bpp is bits per pixel of input data
 uint8_t *houghtransform(uint8_t *d, int *w, int *h, int *s, int bpp)
 {
     int rho, theta, y, x, W = *w, H = *h;
@@ -29,7 +35,7 @@ uint8_t *houghtransform(uint8_t *d, int *w, int *h, int *s, int bpp)
     uint8_t *ht = (uint8_t *)malloc(th*tw*4);
     memset(ht, 0, 4*th*tw); // black bg
 
-     
+
     for(rho = 0; rho < th; rho++)
     {
         for(theta = 0; theta < tw/*720*/; theta++)
@@ -60,7 +66,7 @@ uint8_t *houghtransform(uint8_t *d, int *w, int *h, int *s, int bpp)
                     totalpix++;
                     totalred += GR(x, y);
                     totalgreen += GG(x, y);
-                    totalblue += GB(x, y);      
+                    totalblue += GB(x, y);
                 }
             }
             if ( totalpix > 0 ) {
@@ -69,15 +75,17 @@ uint8_t *houghtransform(uint8_t *d, int *w, int *h, int *s, int bpp)
                 SG(theta, rho) = (int)(totalgreen/dp) &0xff;
                 SB(theta, rho) = (int)(totalblue/dp)  &0xff;
             }
-        }	
+        }
     }
- 
+
+    // h, w, and s are returned as the height, width, stride of the output image
+    // ht is the buffer containing the transformed output image
     *h = th;   // sqrt(W*W+H*H)/2
     *w = tw;   // 360
     *s = 4*tw;
     return ht;
 }
- 
+
 int main(int argc, char **argv)
 {
     cairo_surface_t *inputimg = NULL;
@@ -86,7 +94,7 @@ int main(int argc, char **argv)
     uint8_t *houghdata = NULL, *inputdata = NULL;
     int w, h, s, bpp, format;
     uint64_t measurement_time = 0;
-    
+
 
 #if (CAIRO_HAS_PNG_FUNCTIONS==1)
     printf("cairo supports PNG\n");
@@ -111,7 +119,7 @@ int main(int argc, char **argv)
 
     w = cairo_image_surface_get_width(inputimg);
     h = cairo_image_surface_get_height(inputimg);
-    s = cairo_image_surface_get_stride(inputimg);  
+    s = cairo_image_surface_get_stride(inputimg);
     format = cairo_image_surface_get_format(inputimg);
     switch(format)
     {
@@ -127,21 +135,24 @@ int main(int argc, char **argv)
     measurement_time = apptime_stop_session(&measurement_time);
     printf("Initialization Completed. Time: %lld ns\n", measurement_time);
 
+    printf("input buffer  width %d, height %d, stride %d, bpp %d\n",
+        w, h, s, bpp);
+
     // Now lets measure the Hough Time.
     printf("Hough Transform started...\n");
     apptime_start_session(&measurement_time);
-    
+
     houghdata = houghtransform(inputdata, &w, &h, &s, bpp);
-    
+
     measurement_time = apptime_stop_session(&measurement_time);
     printf("Hought transform completed. Time:  %llu ns\n", measurement_time);
-    
+
     printf("w=%d, h=%d\n", w, h);
     houghimg = cairo_image_surface_create_for_data(houghdata,
                         CAIRO_FORMAT_RGB24,
                         w, h, s);
     cairo_surface_write_to_png(houghimg, argv[2]);
- 
+
 destroy:
     if (inputimg != NULL) cairo_surface_destroy(inputimg);
     if (houghimg != NULL) cairo_surface_destroy(houghimg);
