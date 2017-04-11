@@ -2,6 +2,9 @@
 // It will be used as a baseline to observe transformation
 // Modified and Parallelized with CUDA by Vipin Bakshi and Andre Lo.
 
+// DETAILS: based on houghGPUv1.cu but tried to eliminate thread divergence
+// in kernel.  But this is slower than v1, time with Car.png = 18688360931 ns
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
@@ -29,11 +32,12 @@
 
 // Kernel
 // todo: experiment with 3D instead of 1D grid?
-static int grid;
-__global__ void computationalkernel(uint8_t *d, uint8_t *ht, int W, int H, int stride, int bpp, int th)
+// computationalkernel1 is for( theta < 45 || (theta > 135 && theta < 225) || theta > 315)
+
+__global__ void computationalkernel1(uint8_t *d, uint8_t *ht, int W, int H, int stride, int bpp, int th, int theta_offset)
 {
     int rho, y, x;
-    int theta = threadIdx.x + blockIdx.x * blockDim.x; // theta is based on grid/ block id
+    int theta = (threadIdx.x + blockIdx.x * blockDim.x) + theta_offset; // theta is based on grid/ block id plus offset
 
     for(rho = 0; rho < th; rho++)
     {
@@ -43,29 +47,53 @@ __global__ void computationalkernel(uint8_t *d, uint8_t *ht, int W, int H, int s
         uint32_t totalgreen = 0;
         uint32_t totalblue = 0;
         uint32_t totalpix = 0;
-        if ( theta < 45 || (theta > 135 && theta < 225) || theta > 315) {
-            for(y = 0; y < H; y++) {
-                double dx = W/2.0 + (rho - (H/2.0-y)*S)/C;
-                if ( dx < 0 || dx >= W ) continue;
-                x = floor(dx+.5);
-                if (x == W) continue;
-                totalpix++;
-                totalred += GR(x, y);
-                totalgreen += GG(x, y);
-                totalblue += GB(x, y);
-            }
-        } else {
-            for(x = 0; x < W; x++) {
-                double dy = H/2.0 - (rho - (x - W/2.0)*C)/S;
-                if ( dy < 0 || dy >= H ) continue;
-                y = floor(dy+.5);
-                if (y == H) continue;
-                totalpix++;
-                totalred += GR(x, y);
-                totalgreen += GG(x, y);
-                totalblue += GB(x, y);
-            }
+
+        for(y = 0; y < H; y++) {
+            double dx = W/2.0 + (rho - (H/2.0-y)*S)/C;
+            if ( dx < 0 || dx >= W ) continue;
+            x = floor(dx+.5);
+            if (x == W) continue;
+            totalpix++;
+            totalred += GR(x, y);
+            totalgreen += GG(x, y);
+            totalblue += GB(x, y);
         }
+
+        if ( totalpix > 0 ) {
+            double dp = totalpix;
+            SR(theta, rho) = (int)(totalred/dp)   &0xff;
+            SG(theta, rho) = (int)(totalgreen/dp) &0xff;
+            SB(theta, rho) = (int)(totalblue/dp)  &0xff;
+        }
+    }
+}
+
+// computationalkernel2 is for !( theta < 45 || (theta > 135 && theta < 225) || theta > 315)
+__global__ void computationalkernel2(uint8_t *d, uint8_t *ht, int W, int H, int stride, int bpp, int th, int theta_offset)
+{
+    int rho, y, x;
+    int theta = (threadIdx.x + blockIdx.x * blockDim.x) + theta_offset; // theta is based on grid/ block id plus offset
+
+    for(rho = 0; rho < th; rho++)
+    {
+        double C = cos(RAD(theta));  // todo: call sincos instead?
+        double S = sin(RAD(theta));
+        uint32_t totalred = 0;
+        uint32_t totalgreen = 0;
+        uint32_t totalblue = 0;
+        uint32_t totalpix = 0;
+
+        for(x = 0; x < W; x++) {
+            double dy = H/2.0 - (rho - (x - W/2.0)*C)/S;
+            if ( dy < 0 || dy >= H ) continue;
+            y = floor(dy+.5);
+            if (y == H) continue;
+            totalpix++;
+            totalred += GR(x, y);
+            totalgreen += GG(x, y);
+            totalblue += GB(x, y);
+        }
+
         if ( totalpix > 0 ) {
             double dp = totalpix;
             SR(theta, rho) = (int)(totalred/dp)   &0xff;
@@ -127,7 +155,10 @@ uint8_t *houghtransform(uint8_t *h_in, int *w, int *h, int *s, int bpp)
     printf("allocated input buffers\n");
     // todo: play with grid, block dimensions
     // right now this spawns 360 total kernels, for 360 values of theta
-    computationalkernel <<<grid, (360/ grid)>>> (d_in, d_out, W, H, *s, bpp, th);
+    computationalkernel2 <<<30, 3>>> (d_in, d_out, W, H, *s, bpp, th, 45);  // theta of  45 -> 134
+    computationalkernel2 <<<30, 3>>> (d_in, d_out, W, H, *s, bpp, th, 225); // theta of 225 -> 314
+    computationalkernel1 <<<30, 3>>> (d_in, d_out, W, H, *s, bpp, th, 135); // theta of 135 -> 224
+    computationalkernel1 <<<30, 3>>> (d_in, d_out, W, H, *s, bpp, th, 315); // theta of 315 ->  44 (wrap around since 360 deg = 0 deg)
 
     cudaThreadSynchronize(); // wait for all GPU threads to complete
     printf("cudaThreadSynchronize done\n");
@@ -183,9 +214,6 @@ int main(int argc, char **argv)
 
     printf("input file: %s\n", argv[1]);
     printf("output file: %s\n", argv[2]);
-
-    //todo: take in argv[3] as grid size?
-    grid = 12; // must be a factor of 360 (we calculate using theta for every degree of 360 degs)
 
     apptime_print_res();
 
